@@ -24,8 +24,12 @@ def fetch_worldbank_data():
 
 
 def save_to_file(data, filename=DEFAULT_FILENAME):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except IOError as e:
+        print(f"Ошибка при записи файла {filename}: {e}")
+        raise
 
 def create_s3_client():
     return boto3.client("s3",
