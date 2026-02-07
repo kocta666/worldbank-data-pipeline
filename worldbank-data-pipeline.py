@@ -1,25 +1,40 @@
+import os
 import requests
 import json
 import boto3
 from botocore.exceptions import ClientError
-from datetime import datetime
 import logging
 
-# CONSTANTS
-WORLDBANK_API_URL = "https://api.worldbank.org/v2/country/US/indicator/SP.POP.TOTL?format=json"
-DEFAULT_FILENAME = "data.json"
-S3_ENDPOINT = "http://127.0.0.1:9000"
-S3_ACCESS_KEY = "minioadmin"
-S3_SECRET_KEY = "minioadmin"
-S3_REGION = "us-east-1"
-S3_BUCKET = "api-data"
-S3_OBJECT_NAME = "data.json"
+# --- CONFIGURATION ---
+# Читаем из переменных окружения или используем значения по умолчанию
+WORLDBANK_API_URL = os.getenv(
+    "WORLDBANK_API_URL",
+    "https://api.worldbank.org/v2/country/US/indicator/SP.POP.TOTL?format=json"
+)
+DEFAULT_FILENAME = os.getenv("DEFAULT_FILENAME", "data.json")
 
+# S3/MinIO configuration
+S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://127.0.0.1:9000")
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin")
+S3_REGION = os.getenv("S3_REGION", "us-east-1")
+S3_BUCKET = os.getenv("S3_BUCKET", "api-data")
+S3_OBJECT_NAME = os.getenv("S3_OBJECT_NAME", "data.json")
+# --- END CONFIGURATION ---
+
+# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+# Логируем конфигурацию (без паролей)
+logging.info("Configuration loaded:")
+logging.info(f"  WorldBank URL: {WORLDBANK_API_URL}")
+logging.info(f"  S3 Endpoint: {S3_ENDPOINT}")
+logging.info(f"  S3 Bucket: {S3_BUCKET}")
+logging.info(f"  S3 Region: {S3_REGION}")
 
 def fetch_worldbank_data():
     """
