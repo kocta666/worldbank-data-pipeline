@@ -48,7 +48,7 @@ def save_to_file(data, filename=DEFAULT_FILENAME):
         save data to file
 
         Raises:
-            requests.exceptions.RequestException: If network request fails
+            IOError
         """
     try:
         logging.info("Saving World Bank Data...")
@@ -101,32 +101,75 @@ def upload_to_s3(s3_client, bucket, filename, object_name):
     except ClientError as e:
         logging.error(f"Error uploading to S3 Client: {e}")
 
+
 def main():
     """
-        Main execution flow: fetch World Bank data, save locally, upload to S3.
+    Main execution flow: fetch World Bank data, save locally, upload to S3.
 
-        Workflow:
-        1. Fetch data from World Bank API
-        2. Save data to local file
-        3. Upload file to S3 bucket
+    Workflow:
+    1. Fetch data from World Bank API
+    2. Save data to local file
+    3. Upload file to S3 bucket
 
-        Exceptions are caught and logged.
-        """
+    Exceptions are caught and logged with specific error types.
+    """
     try:
-        logging.info("Fetching World Bank Data...")
-        data = fetch_worldbank_data()
-        save_to_file(data, DEFAULT_FILENAME)
+        logging.info("Starting World Bank data pipeline...")
 
-        s3 = create_s3_client()
-        upload_to_s3(
-            s3_client=s3,
-            bucket=S3_BUCKET,
-            filename=DEFAULT_FILENAME,
-            object_name=S3_OBJECT_NAME
-        )
-        logging.info("Successfully saved World Bank Data")
+        # Step 1: Fetch data
+        logging.info("Step 1: Fetching World Bank Data...")
+        try:
+            data = fetch_worldbank_data()
+        except Exception as e:
+            logging.error(f"Failed to fetch data from World Bank API: {e}")
+            logging.error("Pipeline terminated at data fetching stage")
+            return
+
+        # Step 2: Save to file
+        logging.info("Step 2: Saving data to local file...")
+        try:
+            save_to_file(data, DEFAULT_FILENAME)
+        except Exception as e:
+            logging.error(f"Failed to save data to local file '{DEFAULT_FILENAME}': {e}")
+            logging.error("Pipeline terminated at file saving stage")
+            return
+
+        # Step 3: Upload to S3
+        logging.info("Step 3: Uploading to S3...")
+        try:
+            s3 = create_s3_client()
+        except Exception as e:
+            logging.error(f"Failed to create S3 client: {e}")
+            logging.error(f"Check S3 configuration: endpoint={S3_ENDPOINT}, bucket={S3_BUCKET}")
+            logging.error("Pipeline terminated at S3 client creation")
+            return
+
+        try:
+            upload_to_s3(
+                s3_client=s3,
+                bucket=S3_BUCKET,
+                filename=DEFAULT_FILENAME,
+                object_name=S3_OBJECT_NAME
+            )
+        except Exception as e:
+            logging.error(f"Failed to upload to S3 bucket '{S3_BUCKET}': {e}")
+            logging.error(f"File: {DEFAULT_FILENAME}, Object: {S3_OBJECT_NAME}")
+            logging.error("Pipeline terminated at S3 upload stage")
+            return
+
+        # Success
+        logging.info("=" * 50)
+        logging.info("SUCCESS: World Bank data pipeline completed")
+        logging.info(f"• Data fetched from: {WORLDBANK_API_URL}")
+        logging.info(f"• Local file: {DEFAULT_FILENAME}")
+        logging.info(f"• S3 location: s3://{S3_BUCKET}/{S3_OBJECT_NAME}")
+        logging.info("=" * 50)
+
+    except KeyboardInterrupt:
+        logging.warning("Pipeline interrupted by user")
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Unexpected error in main pipeline: {e}", exc_info=True)
+        logging.error(f"Error type: {type(e).__name__}")
 
 if __name__ == "__main__":
     main()
