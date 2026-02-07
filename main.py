@@ -22,6 +22,15 @@ logging.basicConfig(
 )
 
 def fetch_worldbank_data():
+    """
+        Fetch population data for USA from World Bank API.
+
+        Returns:
+            dict or list: JSON response from API
+
+        Raises:
+            requests.exceptions.RequestException: If network request fails
+        """
     try:
         logging.info("Fetching World Bank Data...")
         url = WORLDBANK_API_URL
@@ -35,6 +44,12 @@ def fetch_worldbank_data():
 
 
 def save_to_file(data, filename=DEFAULT_FILENAME):
+    """
+        save data to file
+
+        Raises:
+            requests.exceptions.RequestException: If network request fails
+        """
     try:
         logging.info("Saving World Bank Data...")
         with open(filename, "w", encoding="utf-8") as f:
@@ -45,6 +60,15 @@ def save_to_file(data, filename=DEFAULT_FILENAME):
         raise
 
 def create_s3_client():
+    """
+        Initialize and return a configured S3 client.
+
+        Returns:
+            An authenticated boto3 S3 client instance.
+
+        Raises:
+            ClientError: If AWS authentication or configuration fails.
+        """
     try:
         logging.info("Creating S3 Client ...")
         return boto3.client("s3",
@@ -58,6 +82,18 @@ def create_s3_client():
         raise
 
 def upload_to_s3(s3_client, bucket, filename, object_name):
+    """
+       Upload file to S3 bucket.
+
+       Args:
+           s3_client: Initialized S3 client
+           bucket: Destination bucket
+           filename: Local file path
+           object_name: S3 object key
+
+       Raises:
+           ClientError: On upload failure
+       """
     try:
         logging.info("Uploading to S3 ...")
         s3_client.upload_file(filename, bucket, object_name)
@@ -66,6 +102,16 @@ def upload_to_s3(s3_client, bucket, filename, object_name):
         logging.error(f"Error uploading to S3 Client: {e}")
 
 def main():
+    """
+        Main execution flow: fetch World Bank data, save locally, upload to S3.
+
+        Workflow:
+        1. Fetch data from World Bank API
+        2. Save data to local file
+        3. Upload file to S3 bucket
+
+        Exceptions are caught and logged.
+        """
     try:
         logging.info("Fetching World Bank Data...")
         data = fetch_worldbank_data()
