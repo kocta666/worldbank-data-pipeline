@@ -1,6 +1,8 @@
 import requests
 import json
 import boto3
+from botocore.exceptions import ClientError
+from datetime import datetime
 
 # CONSTANTS
 WORLDBANK_API_URL = "https://api.worldbank.org/v2/country/US/indicator/SP.POP.TOTL?format=json"
@@ -32,28 +34,37 @@ def save_to_file(data, filename=DEFAULT_FILENAME):
         raise
 
 def create_s3_client():
-    return boto3.client("s3",
+    try:
+        return boto3.client("s3",
                         endpoint_url=S3_ENDPOINT,
                         aws_access_key_id=S3_ACCESS_KEY,
                         aws_secret_access_key=S3_SECRET_KEY,
                         region_name=S3_REGION,
                         )
+    except ClientError as e:
+        print(f"Ошибка доступа к S3: {e}")
+        raise
 
 def upload_to_s3(s3_client, bucket, filename, object_name):
-    s3_client.upload_file(filename, bucket, object_name)
-
+    try:
+        s3_client.upload_file(filename, bucket, object_name)
+    except ClientError as e:
+        print(f"Ошибка доступа к S3: {e}")
 
 def main():
-    data = fetch_worldbank_data()
-    save_to_file(data, DEFAULT_FILENAME)
+    try:
+        data = fetch_worldbank_data()
+        save_to_file(data, DEFAULT_FILENAME)
 
-    s3 = create_s3_client()
-    upload_to_s3(
-        s3_client=s3,
-        bucket=S3_BUCKET,
-        filename=DEFAULT_FILENAME,
-        object_name=S3_OBJECT_NAME
-    )
+        s3 = create_s3_client()
+        upload_to_s3(
+            s3_client=s3,
+            bucket=S3_BUCKET,
+            filename=DEFAULT_FILENAME,
+            object_name=S3_OBJECT_NAME
+        )
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
 
 if __name__ == "__main__":
     main()
